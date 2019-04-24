@@ -1,0 +1,220 @@
+//Інформація про монстрів у комп’ютерній грі. Зберігаються наступні
+//дані про кожного монстра : ім’я; кількість одиниць здоров’я(ціле число,
+//не більше 50000); кількість одиниць атаки(ціле число, не більше 1000);
+//шанс виконати спеціальну атаку(дійсне число від 0 до 1), тип
+//вилікувати себе, паралізувати супротивника; дата та час появи у грі.
+//Критерії пошуку :
+//c.Монстри з іменем, що містить заданий фрагмент тексту; монстри
+//з кількістю одиниць здоров’я не менше заданого та кількістю
+//одиниць атаки не більше заданого; монстри із заданим типом
+//спеціальної атаки, що з’явились у грі не пізніше заданого часу.
+
+#include "pch.h"
+#include <iostream>
+#include <conio.h>
+#include <fstream>
+#include <stdlib.h>
+
+using namespace std;
+
+struct monsters {
+	char name[20];
+	char data[6];//23:59
+	int health;
+	int damage;
+	float special;
+	int type;
+}MyMonsters[20];
+
+struct monsters_number {
+	int number=0;
+}info;
+
+void Menu();
+void AddMonster();
+void ReadFromFile();
+void print();
+void UpdateStats();
+void CheckStats();
+
+
+int main()
+{
+	CheckStats();
+	Menu();
+}
+
+void Menu() {
+
+	char input;
+again:
+
+	cout << "Add_monster: press 1\n";
+	cout << "Reading_from_file: press 2\n";
+	cout << "Print: press 3\n";
+	cout << "Search: press 4\n";
+	cout << "Exit: press 0\n";
+
+	//input = _getch();
+	cin >> input;
+
+	if (input == '1')
+	{
+		AddMonster();
+		goto again;
+	}
+	if (input == '2')
+	{
+		ReadFromFile();
+		system("cls");
+		goto again;
+	}
+	if (input == '3')
+	{
+		print();
+		goto again;
+	}
+	if (input == '4')
+	{
+		system("cls");
+		goto again;
+	}
+	if (input == '0')
+	{
+		exit(1);
+	}
+}
+
+void AddMonster() {
+	fstream file;
+
+	file.open("MyFile.txt", ios::out | ios::ate | ios::binary | ios::in);
+	if (file.is_open()) {
+		cout << "Enter name :" << endl;
+		char name[20];
+		cin >> name;
+		if (*name != '/0')
+		{
+			strcpy_s(MyMonsters[info.number].name, name);
+		}
+		cout << "Enter data :" << endl;
+		char data[6];
+		cin >> data;
+		if (*data != '/0')
+		{
+			strcpy_s(MyMonsters[info.number].data,data);
+		}
+		int Health;
+	HealthAgain:
+		cout << "Enter health :" << endl;
+		cin >> Health;
+		if (Health > 50000) {
+			goto HealthAgain;
+		}
+		MyMonsters[info.number].health = Health;
+		int damage;
+	DamageAgain:
+		cout << "Enter damage :" << endl;
+		cin >> damage;
+		if (damage > 1000) {
+			goto DamageAgain;
+		}
+		MyMonsters[info.number].damage = damage;
+		cout << "Enter special attack :" << endl;
+		float special;
+		cin >> special;
+		MyMonsters[info.number].special = special;
+		int type;
+	TypeAgain:
+		cout << "Enter Type of the atack :" << endl;
+		cout << "1-more damage" << endl;
+		cout << "2-repeat attack" << endl;
+		cout << "3-heal" << endl;
+		cout << "4-paralize" << endl;
+		cin >> type;
+		if (type > 4 || type < 1) {
+			goto TypeAgain;
+		}
+		MyMonsters[info.number].type = type;
+
+		cin.clear();
+
+		file.seekp((sizeof(monsters))*info.number);// перешагнуть на количество монстров
+		file.write((char*)&MyMonsters[info.number], sizeof(monsters));
+		info.number++;
+		UpdateStats();
+	}
+	else {
+		cout << "File is not opened";
+	}
+	file.close();
+}
+
+void ReadFromFile() {
+	fstream file;
+	file.open("MyFile.txt", ios::binary | ios::in);
+	if (file.is_open()) {
+		int i = 0;
+		while (i < info.number) {
+			file.read((char *)&MyMonsters[i], sizeof(monsters));
+			file.seekg(sizeof(MyMonsters[i]), ios::cur);	// перенести указатель чтения
+			i++;
+		}
+		file.close();
+	}
+	else {
+		cout << "File is not opened" << endl;
+	}
+}
+
+void print() {
+	for (int i = 0; i < info.number; i++) {
+		cout << "Monster name: " << MyMonsters[i].name << endl;
+		cout << "Data: " << MyMonsters[i].data << endl;
+		cout << "Health: " << MyMonsters[i].health << endl;
+		cout << "Damage: " << MyMonsters[i].damage << endl;
+		cout << "Chance of special attack: " << MyMonsters[i].special << endl;
+		cout << "Type of special attack: " << MyMonsters[i].type << endl << endl;
+	}
+}
+
+void UpdateStats() {
+	fstream Stats;
+	Stats.open("Stats.txt", ios::out | ios::binary);
+	if (Stats.is_open())
+	{
+		Stats.write((char*)&info, sizeof(monsters_number));
+	}
+	else
+	{
+		cout << "can't open stats file" << endl;
+	}
+	Stats.close();
+}
+
+void CheckStats()
+{
+	ifstream Stats;
+	Stats.open("Stats.txt", ios::binary|ios::ate);
+	if (Stats.is_open())
+	{
+		streamoff begin, end;
+		//begin = Stats.tellg();
+		//Stats.seekg(0, fstream::end);
+		end = Stats.tellg();
+		if (end == 0)
+		{
+			info.number = 0;
+			Stats.close();
+			return;
+		}
+		Stats.seekg(0, fstream::beg); // в начало
+		Stats.read((char*)&info, sizeof(monsters_number));
+	}
+	else
+	{
+		cout << "can't open stats file" << endl;
+	}
+	Stats.close();
+
+}
