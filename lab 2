@@ -1,0 +1,255 @@
+/*Реалізувати структуру даних «список» з наступними операціями: 1)
+create_empty – створення пустого списку; 2) append – додавання
+елементу в кінець списку; 3) insert – вставка елементу перед елементом
+з індексом k; 4) remove – видалення елементу з індексом k; 5) get, set –
+доступ до елементу за індексом; 6) length – довжина списку.*/
+/*В структурі зберігаються точки у тривимірному просторі (дійсні
+координати)*/
+
+#include "pch.h"
+#include <iostream>
+using namespace std;
+struct info {
+	float coordinates[3];
+	int counter;
+};
+struct Node {
+	info Data;
+	Node *next=nullptr;
+	Node *prev=nullptr;
+};
+struct Nodelist {
+	Node *head = nullptr;
+	Node *tail = nullptr;
+	void append()// додавання елементу в кінець списку
+	{
+		if (head = nullptr) {
+			Node *cur = new Node;
+			cur->Data.counter=1;
+			head = cur;
+			tail = cur;
+		}
+		else {
+			Node *cur = new Node;
+			Ellement_init(&cur);
+			cur->prev = tail;
+			cur->Data.counter = tail->Data.counter + 1;
+			tail->next = cur;
+			tail = cur;
+		}
+	}
+	void insert(int k)//– вставка елементу перед елементом з індексом k
+	{
+		if (k > 0 && (k <= tail->Data.counter))
+		{
+			Node *p;
+			Node *temp = new Node;
+			temp = head;
+			while (temp->next->Data.counter != k)
+			{
+				temp = temp->next;
+			}
+			p = temp->next->prev;// сохраняем адрес предыдущего эллемента
+			temp->prev = p;
+			temp->next->prev = temp;
+			p->next = temp;
+			temp->Data.counter = k;
+			Ellement_init(&temp);
+			while (temp->next!=nullptr) {
+				temp->next->Data.counter = temp->next->Data.counter + 1;
+				temp = temp->next;
+			}
+		}
+		else {
+			cout << "wrong number, try again :(" << endl;
+			int n;
+			cin >> n;
+			insert(n);
+		}
+	}
+	void length() //довжина списку.
+	{
+		cout << "Your list contains " << tail->Data.counter << " elements" << endl;
+	}
+	void remove(int k)//видалення елементу з індексом k
+	{
+		if (k > 0 && (k <= tail->Data.counter))
+		{
+			Node *temp = new Node;
+			temp = head;
+			while (temp->Data.counter != k)
+			{
+				temp = temp->next;
+			}
+			Node *Prev, *Next;
+			Prev = temp->prev;
+			Next = temp->next;
+			if (Prev != nullptr)
+			{
+				Prev->next = temp->next;
+			}
+			if (Next != nullptr)
+			{
+				Next->prev = temp->prev;
+			}
+			Node *cur;
+			cur = temp;
+			delete temp;
+			while (cur->next != nullptr) {
+				cur->next->Data.counter = cur->next->Data.counter - 1;
+				cur = cur->next;
+			}
+			
+		}
+		else {
+			cout << "wrong number, try again :(" << endl;
+			int n;
+			cin >> n;
+			insert(n);
+		}
+	}
+	void create_empty(int k)// кількість елементів в списку
+	{
+		int already_have = 0;
+		Node *cur = new Node;
+		cur = head;
+		while(k!= already_have){
+			if (head = nullptr) {
+				cur->Data.counter = 1;
+				head = cur;
+				tail = cur;
+				already_have++;
+			}
+			else {
+				cur->prev = tail;
+				cur->Data.counter = tail->Data.counter + 1;
+				tail->next = cur;
+				tail = cur;
+				already_have++;
+			}
+		}
+	}
+	void print() {
+		Node *cur = new Node;
+		cur = head;
+		while (cur != nullptr)
+		{
+			cout << "Number " << cur->Data.counter << ": " << endl;;
+			cout << "x" << ":" << cur->Data.coordinates[0] << endl;
+			cout << "y" << ":" << cur->Data.coordinates[1] << endl;
+			cout << "z" << ":" << cur->Data.coordinates[2] << endl;
+			cout<<"******************"<<endl;
+			cur = cur->next;
+		}
+	}
+	void get(int k) // показати координати за індексом
+	{
+		Node *cur = new Node;
+		cur = head;
+		while (cur->Data.counter != k) {
+			cur = cur->next;
+		}
+		cout << "Number " << cur->Data.counter << ": " << endl;
+			cout << "x" << ":" << cur->Data.coordinates[0] << endl;
+			cout << "y" << ":" << cur->Data.coordinates[1] << endl;
+			cout << "z" << ":" << cur->Data.coordinates[2] << endl;
+	}
+	void set(int k)
+	{
+		Node *cur = new Node;
+		cur = head;
+		while (cur->Data.counter != k) {
+			cur = cur->next;
+		}
+		Ellement_init(&cur);
+	}
+	void Ellement_init(Node **cur) {
+			cout << "x coordinate: ";
+			cin >> (*cur)->Data.coordinates[0];
+			cout << "y coordinate: ";
+			cin >> (*cur)->Data.coordinates[1];
+			cout << "z coordinate: ";
+			cin >> (*cur)->Data.coordinates[2];
+	}
+	void Clear() {
+		Node *cur=new Node;
+		for (cur = head; cur->next; cur = cur->next)
+			delete cur;
+	}
+};
+void menu(Nodelist *Mylist);
+ 
+
+int main()
+{
+	Nodelist Mylist;
+	menu(&Mylist);
+	Mylist.Clear();
+}
+void menu(Nodelist *Mylist) {
+	char input;
+	cout << "1: create_empty" << endl;
+	cout << "2: append " << endl;
+	cout << "3: insert" << endl;
+	cout << "4: remove " << endl;
+	cout << "5: get element" << endl;
+	cout << "6: set element" << endl;
+	cout << "7: length " << endl;
+	cout << "8: print all the list " << endl;
+	cin >> input;
+	if (input == '1')
+	{
+		cout << "How many create?" << endl;
+		int k;
+		cin >> k;
+		Mylist->create_empty(k);
+		menu(Mylist);
+	}
+	else if (input == '2')
+	{
+		Mylist->append();
+		menu(Mylist);
+	}
+	else if (input == '3')
+	{
+		cout << "insert before which one?" << endl;
+		int n;
+		cin >> n;
+		Mylist->insert(n);
+		menu(Mylist);
+	}
+	else if (input == '4')
+	{
+		cout << "remove which one?" << endl;
+		int k;
+		cin >> k;
+		Mylist->remove(k);
+		menu(Mylist);
+	}
+	else if (input == '5')
+	{
+		cout << "Get which one " << endl;
+		int k;
+		cin >> k;
+		Mylist->get(k);
+		menu(Mylist);
+	}
+	else if (input == '6')
+	{
+		cout << "Set which one " << endl;
+		int k;
+		cin >> k;
+		Mylist->set(k);
+		menu(Mylist);
+	}
+	else if (input == '7')
+	{
+		Mylist->length();
+		menu(Mylist);
+	}
+	else if (input == '8')
+	{
+		Mylist->print();
+		menu(Mylist);
+	}
+}
