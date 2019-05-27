@@ -1,0 +1,370 @@
+#include "pch.h"
+#include <iostream>
+#include <string>
+#include <fstream>
+#include <random>
+#include <algorithm>
+#include <chrono>
+#include <ctime>
+
+using namespace std;
+
+void quick_sort(vector <string> &words, int left, int right) {
+	int i = left, j = right;
+	partition(words, i, j);
+	if (j > left) quick_sort(words, left, j);
+	if (i < right) quick_sort(words, i, right);
+}
+
+void quick_sort_demo(vector <string> &words, int left, int right) {
+	int i = left, j = right;
+	string pivot = partition(words, i, j);
+
+	cout << endl << endl;
+	for (int k = left; k <= right; k++) cout << words[k] << endl;
+	cout << endl << "Pivot: " << pivot << endl;
+	cout << "----------------";
+
+	if (j > left) quick_sort_demo(words, left, j);
+	if (i < right) quick_sort_demo(words, i, right);
+}
+
+void merge(vector <string> &words, int left, int right, int mid) {
+	int size_left = mid - left + 1, size_right = right - mid;
+	int i = 0, j = 0, k = left;
+	string* buf_left = new string[size_left], *buf_right = new string[size_right];
+
+	for (; i < size_left; i++) buf_left[i] = words[left + i];
+	for (; j < size_right; j++) buf_right[j] = words[mid + 1 + j];
+	i = 0;
+	j = 0;
+
+	while (i < size_left && j < size_right) {
+		if (buf_left[i] < buf_right[j]) {
+			words[k] = buf_left[i];
+			i++;
+		}
+		else {
+			words[k] = buf_right[j];
+			j++;
+		}
+		k++;
+	}
+
+	while (i < size_left) {
+		words[k] = buf_left[i];
+		i++;
+		k++;
+	}
+
+	while (j < size_right) {
+		words[k] = buf_right[j];
+		j++;
+		k++;
+	}
+
+	delete[] buf_left;
+	delete[] buf_right;
+}
+
+void merge_sort(vector <string> &words, int left, int right) {
+	if (left >= right) return;
+	int mid = (left + right) >> 1;
+	merge_sort(words, left, mid);
+	merge_sort(words, mid + 1, right);
+	merge(words, left, right, mid);
+}
+
+void merge_sort_demo(vector <string> &words, int left, int right) {
+	if (left >= right) return;
+	int mid = (left + right) >> 1;
+	merge_sort_demo(words, left, mid);
+	merge_sort_demo(words, mid + 1, right);
+	merge(words, left, right, mid);
+
+	cout << endl << endl;
+	for (int k = left; k <= right; k++) cout << words[k]
+		<< endl;
+	cout << "----------------";
+}
+
+void combined_sort(vector <string> &words, int left, int right, const int THRESHOLD) {
+	if (right - left < THRESHOLD) selection_sort(words, left, right);
+	else {
+		int mid = (left + right) >> 1;
+		combined_sort(words, left, mid, THRESHOLD);
+		combined_sort(words, mid + 1, right, THRESHOLD);
+		merge(words, left, right, mid);
+	}
+}
+
+void combined_sort_demo(vector <string> &words, int left, int right, const int THRESHOLD) {
+	if (right - left < THRESHOLD) selection_sort(words, left, right, true);
+	else {
+		int mid = (left + right) >> 1;
+		const unsigned int N = words.size();
+		combined_sort_demo(words, left, mid, THRESHOLD);
+		combined_sort_demo(words, mid + 1, right, THRESHOLD);
+		merge(words, left, right, mid);
+
+		cout << endl << endl;
+		for (int k = left; k <= right; k++) cout << words[k] << endl;
+		cout << "----------------";
+	}
+}
+
+int get_rand_int(int min, int max) {
+	static std::random_device rd;
+	static std::seed_seq seed{ rd(), (unsigned)time(nullptr) };
+	static std::mt19937 gen(seed);
+	std::uniform_int_distribution<> dis(min, max);
+	return dis(gen);
+}
+
+void selection_sort(vector <string> &words, int left, int right, bool demo = false) {
+	int i = left, min_index;
+	while (i != right) {
+		min_index = i;
+		for (int j = i; j <= right; j++) {
+			if (words[j] < words[min_index]) min_index = j;
+		}
+		swap(words[i], words[min_index]);
+		i++;
+		if (demo) {
+			cout << endl << endl;
+			for (int k = left; k <= right; k++) cout << words[k] << endl;
+			cout << "----------------";
+		}
+	}
+}
+
+string partition(vector <string> &words, int &i, int &j) {
+	string pivot = words[get_rand_int(i, j)];
+	while (i <= j) {
+		while (words[i] < pivot) i++;
+		while (pivot < words[j]) j--;
+		if (i <= j) {
+			swap(words[i], words[j]);
+			i++;
+			j--;
+		}
+	}
+	return pivot;
+}
+
+bool read_file(const string FILENAME, const string ALPHABET, vector <string> &words) {
+	ifstream fin(FILENAME);
+	char ch;
+	string temp;
+	int i = -1;
+	bool new_word = true;
+
+	while (!fin.eof()) {
+		fin.get(ch);
+		if (ALPHABET.find(ch) != string::npos) {
+			if (new_word) {
+				words.push_back(temp);
+				i++;
+				new_word = false;
+			}
+			words[i] += ch;
+		}
+		else new_word = true;
+	}
+
+	fin.close();
+	if (words.empty()) return false;
+	return true;
+}
+
+bool operator<(string const &_left, string const &_right) {
+	string left, right;
+	for (char ch : _left) {
+		if (ch != '-' && ch != '\'') {
+			if (ch > 96) ch -= 32;
+			left += ch;
+		}
+	}
+	for (char ch : _right) {
+		if (ch != '-' && ch != '\'') {
+			if (ch > 96) ch -= 32;
+			right += ch;
+		}
+	}
+	if (left.length() != right.length()) {
+		if (left.length() < right.length()) return true;
+		return false;
+	}
+
+	int len = left.length();
+	for (int i = 0; i < len; i++) {
+		if (left[i] < right[i]) return true;
+		if (left[i] > right[i]) return false;
+	}
+	return false;
+}
+
+int demonstration_mode() {
+	vector <string> words;
+	const string FILENAME = "text.txt";
+	const string ALPHABET = "-'qwertyuiopasdfghjklzxcvbnmQWERTYUIOPASDFGHJKLZXCVBNM";
+	const int THRESHOLD = 5;
+
+	if (!read_file(FILENAME, ALPHABET, words)) {
+		cout << "The file has got no words.";
+		return 0;
+	}
+
+	const unsigned int N = words.size();
+
+	cout << "DEMONSTRATION MODE" << endl << endl << "Text sample:" << endl;
+	for (unsigned int i = 0; i < N; i++) cout << words[i] << ' ';
+
+	cout << endl << endl << "Selection sort:";
+	selection_sort(words, 0, N - 1, true);
+	cout << endl << "Result: " << endl << endl;
+	for (unsigned int i = 0; i < N; i++) cout << words[i] << endl;
+
+	words.clear();
+	read_file(FILENAME, ALPHABET, words);
+	cout << endl << endl << "Quick sort:";
+	quick_sort_demo(words, 0, N - 1);
+	cout << endl << "Result: " << endl << endl;
+	for (unsigned int i = 0; i < N; i++) cout << words[i] << endl;
+
+	words.clear();
+	read_file(FILENAME, ALPHABET, words);
+	cout << endl << endl << "Merge sort:";
+	merge_sort_demo(words, 0, N - 1);
+	cout << endl << "Result: " << endl << endl;
+	for (unsigned int i = 0; i < N; i++) cout << words[i] << endl;
+
+	words.clear();
+	read_file(FILENAME, ALPHABET, words);
+	cout << endl << endl << "Combined sort (merge + selection sorts, threshold = " << THRESHOLD << "):";
+	combined_sort_demo(words, 0, N - 1, 5);
+	cout << endl << "Result: " << endl << endl;
+	for (unsigned int i = 0; i < N; i++) cout << words[i] << endl;
+
+	cout << endl << endl;
+	return 0;
+}
+
+void calculate_duration(void(*func)(vector <string> &, int, int), vector <string> &words, int left, int right) {
+	std::chrono::time_point<std::chrono::system_clock> start, end;
+	start = std::chrono::system_clock::now();
+	func(words, left, right);
+	end = std::chrono::system_clock::now();
+	cout << std::chrono::duration_cast<std::chrono::milliseconds>(end - start).count() << "ms\n";
+}
+
+void calculate_duration(void(*func)(vector <string> &, int, int, bool), vector <string> &words, int left, int right) {
+	std::chrono::time_point<std::chrono::system_clock> start, end;
+	start = std::chrono::system_clock::now();
+	func(words, left, right, false);
+	end = std::chrono::system_clock::now();
+	cout << std::chrono::duration_cast<std::chrono::milliseconds>(end - start).count() << "ms\n";
+}
+
+void calculate_duration(void(*func)(vector <string> &, int, int, int), vector <string> &words, int left, int right, const int THRESHOLD) {
+	std::chrono::time_point<std::chrono::system_clock> start, end;
+	start = std::chrono::system_clock::now();
+	func(words, left, right, THRESHOLD);
+	end = std::chrono::system_clock::now();
+	cout << std::chrono::duration_cast<std::chrono::milliseconds>(end - start).count() << "ms\n";
+}
+
+void calculate_duration(vector <string> &words, int left, int right) {
+	std::chrono::time_point<std::chrono::system_clock> start, end;
+	start = std::chrono::system_clock::now();
+	std::sort(words.begin() + left, words.begin() + right, operator<);
+	end = std::chrono::system_clock::now();
+	cout << std::chrono::duration_cast<std::chrono::milliseconds>(end - start).count() << "ms\n";
+}
+
+void results_output(vector <string> &words, int left, int right, const int THRESHOLD1, const int THRESHOLD2, const int THRESHOLD3) {
+	cout << "Selection sort: ";
+	calculate_duration(&selection_sort, words, left, right);
+
+	cout << endl << "Quick sort: ";
+	calculate_duration(&quick_sort, words, left, right);
+
+	cout << endl << "Merge sort: ";
+	calculate_duration(&merge_sort, words, left, right);
+
+	cout << endl << "Combined sort (threshold = " << THRESHOLD1 << "): ";
+	calculate_duration(&combined_sort, words, left, right, THRESHOLD1);
+
+	cout << endl << "Combined sort (threshold = " << THRESHOLD2 << "): ";
+	calculate_duration(&combined_sort, words, left, right, THRESHOLD2);
+
+	cout << endl << "Combined sort (threshold = " << THRESHOLD3 << "): ";
+	calculate_duration(&combined_sort, words, left, right, THRESHOLD3);
+
+	cout << endl << "std::sort: ";
+	calculate_duration(words, left, right);
+}
+
+int benchmark() {
+	vector <string> words;
+	const string FILENAME1 = "random_order.txt";
+	const string ALPHABET = "-'qwertyuiopasdfghjklzxcvbnmQWERTYUIOPASDFGHJKLZXCVBNM";
+	const int THRESHOLD1 = 5;
+	const int THRESHOLD2 = 10;
+	const int THRESHOLD3 = 15;
+
+	if (!read_file(FILENAME1, ALPHABET, words)) {
+		cout << "The file has got no words.";
+		return 0;
+	}
+
+	const unsigned int N = words.size();
+
+	cout << "BENCHMARK" << endl << endl << "Text sample (random order):" << endl;
+	for (unsigned int i = 0; i < N; i++) cout << words[i] << ' ';
+
+	cout << endl << endl << "Random order results" << endl << endl;
+	results_output(words, 0, N - 1, THRESHOLD1, THRESHOLD2, THRESHOLD3);
+
+	cout << endl << endl << "Right order results" << endl << endl;
+	results_output(words, 0, N - 1, THRESHOLD1, THRESHOLD2, THRESHOLD3);
+
+	vector <string> words_reverse(N);
+	for (unsigned int i = 0; i < N; i++) words_reverse[i] = words[N - 1 - i];
+	words.clear();
+
+	cout << endl << endl << "Wrong order results" << endl << endl;
+	results_output(words_reverse, 0, N - 1, THRESHOLD1, THRESHOLD2, THRESHOLD3);
+
+	return 0;
+}
+
+int main()
+{
+	srand((unsigned)time(nullptr));
+	short int value;
+
+	cout << "Enter:" << endl << "'0' for demonstration mode" << endl << "'1' for benchmark" << endl;
+	while (true) {
+		cout << "Value: ";
+		if (!(cin >> value)) {
+			cin.clear();
+			cin.ignore(10000, '\n');
+			cout << "Please, enter numbers only." << endl;
+			continue;
+		}
+		else if (value < 0 || value > 1) {
+			cout << "Please, enter a value from the list above." << endl;
+		}
+		else break;
+	}
+
+	switch (value) {
+	case 0:
+		system("cls");
+		return demonstration_mode();
+	case 1:
+		system("cls");
+		return benchmark();
+	}
+}
