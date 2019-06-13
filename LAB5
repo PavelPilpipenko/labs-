@@ -1,0 +1,1396 @@
+#include "pch.h"
+#include <iostream>
+#include <vector>
+#include <random>
+#include <chrono>
+using std::cin;
+using std::cout;
+using std::endl;
+using std::vector;
+
+const int MAX_VERTICES = 100, INF = 1000000;
+
+struct graph_struct {
+	list neighbours[MAX_VERTICES];
+	int vertex_count = 0;
+	bool is_oriented = false;
+	graph_struct() {}
+	graph_struct(int vertices) {
+		if (vertices < 1 || vertices > MAX_VERTICES) {
+			throw std::invalid_argument("Wrong number of vertices.");
+		}
+		vertex_count = vertices;
+	}
+};
+
+struct graph_matrix {
+	int adjacent[MAX_VERTICES][MAX_VERTICES];
+	int vertex_count = 0;
+	bool is_oriented = false;
+	graph_matrix() {}
+	graph_matrix(int vertices) {
+		if (vertices < 1 || vertices > MAX_VERTICES) {
+			throw std::invalid_argument("Wrong number of vertices.");
+		}
+		vertex_count = vertices;
+		for (int i = 0; i < vertex_count; i++) {
+			for (int j = 0; j < vertex_count; j++) {
+				adjacent[i][j] = INF;
+			}
+		}
+	}
+};
+
+struct node {
+	int vertex, weight;
+	node* next = nullptr, *prev = nullptr;
+	node(int val, int _weight) {
+		vertex = val;
+		weight = _weight;
+	}
+};
+
+struct list {
+	node* begin = nullptr;
+
+	void push_in_order(int to, int weight) {
+		node* current = begin, *temp = current;
+		if (current) {
+			if (current->vertex > to) {
+				begin = new node(to, weight);
+				begin->next = current;
+				current->prev = begin;
+			}
+			else {
+				while (current) {
+					temp = current;
+					if (current->vertex < to) current = current->next;
+					else if (current->vertex == to) {
+						current->weight = weight;
+						return;
+					}
+					else {
+						node* new_node = new node(to, weight);
+						new_node->next = current;
+						new_node->prev = current->prev;
+						if (current->prev) current->prev->next = new_node;
+						current->prev = new_node;
+						return;
+					}
+				}
+				temp->next = new node(to, weight);
+				temp->next->prev = current;
+			}
+		}
+		else {
+			begin = new node(to, weight);
+		}
+	}
+};
+
+struct graph_struct {
+	list neighbours[MAX_VERTICES];
+	int vertex_count = 0;
+	bool is_oriented = false;
+	graph_struct() {}
+	graph_struct(int vertices) {
+		if (vertices < 1 || vertices > MAX_VERTICES) {
+			throw std::invalid_argument("Wrong number of vertices.");
+		}
+		vertex_count = vertices;
+	}
+};
+
+struct graph_matrix {
+	int adjacent[MAX_VERTICES][MAX_VERTICES];
+	int vertex_count = 0;
+	bool is_oriented = false;
+	graph_matrix() {}
+	graph_matrix(int vertices) {
+		if (vertices < 1 || vertices > MAX_VERTICES) {
+			throw std::invalid_argument("Wrong number of vertices.");
+		}
+		vertex_count = vertices;
+		for (int i = 0; i < vertex_count; i++) {
+			for (int j = 0; j < vertex_count; j++) {
+				adjacent[i][j] = INF;
+			}
+		}
+	}
+};
+
+
+struct q_node {
+	int data;
+	q_node* next = nullptr;
+	q_node(int _data) {
+		data = _data;
+	}
+};
+
+struct deque {
+	q_node* begin = nullptr, *end = nullptr;
+	
+	bool is_empty() {
+		if (begin == nullptr) return true;
+		else return false;
+	}
+
+	void push_back(int data) {
+		if (begin) {
+			q_node* new_node = new q_node(data);
+			end->next = new_node;
+			end = new_node;
+		}
+		else {
+			begin = end = new q_node(data);
+		}
+	}
+
+	void pop_front() {
+		if (begin) {
+			if (begin == end) {
+				delete begin;
+				begin = end = nullptr;
+			}
+			else {
+				q_node* temp = begin;
+				begin = begin->next;
+				delete temp;
+			}
+		}
+		else return;
+	}
+};
+
+void add_edge(graph_matrix &graph, int from, int to, int weight) {
+	if (from != to && from < graph.vertex_count && to < graph.vertex_count) {
+		graph.adjacent[from][to] = weight;
+		if (!graph.is_oriented) {
+			graph.adjacent[to][from] = weight;
+		}
+		else {
+			if (graph.adjacent[to][from] != INF) {
+				graph.adjacent[to][from] = graph.adjacent[from][to];
+			}
+		}
+	}
+}
+
+node* find_in_list(list const &this_list, int vertex) {
+	node* current = this_list.begin;
+	while (current) {
+		if (current->vertex == vertex) return current;
+		current = current->next;
+	}
+	return nullptr;
+}
+
+void add_edge(graph_struct &graph, int from, int to, int weight) {
+	if (from != to && from < graph.vertex_count && to < graph.vertex_count) {
+		graph.neighbours[from].push_in_order(to, weight);
+		if (!graph.is_oriented) {
+			graph.neighbours[to].push_in_order(from, weight);
+		}
+		else {
+			node* found;
+			if (found = find_in_list(graph.neighbours[to], from)) {
+				found->weight = weight;
+			}
+		}
+	}
+}
+
+int get_random_int(int min, int max) {
+	static std::random_device rd;
+	static std::mt19937 gen(rd());
+	std::uniform_int_distribution <> dis(min, max);
+	return dis(gen);
+}
+
+double get_random_real(double min, double max) {
+	static std::random_device rd;
+	static std::mt19937 gen(rd());
+	std::uniform_real_distribution <> dis(min, max);
+	return dis(gen);
+}
+
+graph_matrix generate_graph_matrix(const int NUM_OF_VERTICES, const double PROBABILITY, bool is_oriented = false) {
+	graph_matrix result(NUM_OF_VERTICES);
+	if (is_oriented) result.is_oriented = true;
+	if (PROBABILITY < 0) {
+		throw std::invalid_argument("Wrong probability.");
+	}
+
+	for (int i = 0; i < NUM_OF_VERTICES; i++) {
+		for (int j = 0; j < NUM_OF_VERTICES; j++) {
+			if (get_random_real(nextafter(0.0, 1.0), 1.0) <= PROBABILITY) {
+				add_edge(result, i, j, get_random_int(1, 1000));
+			}
+		}
+	}
+
+	return result;
+}
+
+graph_struct generate_graph_struct(const int NUM_OF_VERTICES, const double PROBABILITY, bool is_oriented = false) {
+	graph_struct result(NUM_OF_VERTICES);
+	if (is_oriented) result.is_oriented = true;
+	if (PROBABILITY < 0) {
+		throw std::invalid_argument("Wrong probability.");
+	}
+
+	for (int i = 0; i < NUM_OF_VERTICES; i++) {
+		for (int j = 0; j < NUM_OF_VERTICES; j++) {
+			if (get_random_real(nextafter(0.0, 1.0), 1.0) <= PROBABILITY) {
+				add_edge(result, i, j, get_random_int(1, 1000));
+			}
+		}
+	}
+
+	return result;
+}
+
+graph_matrix generate_tree_matr(const int NUM_OF_VERTICES, bool is_oriented) {
+	graph_matrix result(NUM_OF_VERTICES);
+	if (is_oriented) result.is_oriented = true;
+	vector <int> vertices(NUM_OF_VERTICES);
+	vector <int> vacant;
+	int num_of_children, parent, parent_num, son, son_num;
+
+	for (int i = 0; i < NUM_OF_VERTICES; i++) vertices[i] = i;
+	parent_num = get_random_int(0, vertices.size() - 1);
+	vacant.push_back(vertices[parent_num]);
+	vertices.erase(vertices.begin() + parent_num);
+
+	while (!vertices.empty()) {
+		parent_num = get_random_int(0, vacant.size() - 1);
+		parent = vacant[parent_num];
+		vacant.erase(vacant.begin() + parent_num);
+		num_of_children = get_random_int(1, vertices.size());
+
+		for (int i = 0; i < num_of_children; i++) {
+			son_num = get_random_int(0, vertices.size() - 1);
+			son = vertices[son_num];
+			add_edge(result, parent, son, get_random_int(1, 1000));
+			vacant.push_back(son);
+			vertices.erase(vertices.begin() + son_num);
+		}
+	}
+
+	return result;
+}
+
+graph_struct generate_tree_str(const int NUM_OF_VERTICES, bool is_oriented) {
+	graph_struct result(NUM_OF_VERTICES);
+	if (is_oriented) result.is_oriented = true;
+	vector <int> vertices(NUM_OF_VERTICES);
+	vector <int> vacant;
+	int num_of_children, parent, parent_num, son, son_num;
+	
+	for (int i = 0; i < NUM_OF_VERTICES; i++) vertices[i] = i;
+	parent_num = get_random_int(0, vertices.size() - 1);
+	vacant.push_back(vertices[parent_num]);
+	vertices.erase(vertices.begin() + parent_num);
+
+	while (!vertices.empty()) {
+		parent_num = get_random_int(0, vacant.size() - 1);
+		parent = vacant[parent_num];
+		vacant.erase(vacant.begin() + parent_num);
+		num_of_children = get_random_int(1, vertices.size());
+
+		for (int i = 0; i < num_of_children; i++) {
+			son_num = get_random_int(0, vertices.size() - 1);
+			son = vertices[son_num];
+			add_edge(result, parent, son, get_random_int(1, 1000));
+			vacant.push_back(son);
+			vertices.erase(vertices.begin() + son_num);
+		}
+	}
+
+	return result;
+}
+
+graph_struct matrix_to_struct(graph_matrix const &graph) {
+	graph_struct new_graph(graph.vertex_count);
+	new_graph.is_oriented = graph.is_oriented;
+	for (int i = 0; i < graph.vertex_count; i++) {
+		for (int j = 0; j < graph.vertex_count; j++) {
+			if (graph.adjacent[i][j] != INF) {
+				new_graph.neighbours[i].push_in_order(j, graph.adjacent[i][j]);
+			}
+		}
+	}
+	return new_graph;
+}
+
+graph_matrix struct_to_matrix(graph_struct const &graph) {
+	graph_matrix new_graph(graph.vertex_count);
+	node* current;
+	new_graph.is_oriented = graph.is_oriented;
+	for (int i = 0; i < graph.vertex_count; i++) {
+		current = graph.neighbours[i].begin;
+		while (current) {
+			new_graph.adjacent[i][current->vertex] = current->weight;
+			current = current->next;
+		}
+	}
+	return new_graph;
+}
+
+void graph_output(graph_matrix const &graph) {
+	bool typed;
+	int j;
+
+	cout << "Vertices: " << graph.vertex_count << "      ";
+	if (graph.is_oriented) cout << "Oriented.";
+	else cout << "Not oriented.";
+	cout << endl;
+
+	for (int i = 0; i < graph.vertex_count; i++) {
+		typed = false;
+		if (graph.is_oriented) j = 0;
+		else j = i + 1;
+		for (; j < graph.vertex_count; j++) {
+			if (graph.adjacent[i][j] != INF) {
+				cout << '(' << i << ", " << j << ", " << graph.adjacent[i][j] << ")  ";
+				typed = true;
+			}
+		}
+		if (typed) cout << endl;
+	}
+	cout << endl << endl;
+}
+
+void graph_output(graph_struct const &graph) {
+	node* current;
+	bool typed;
+	
+	cout << "Vertices: " << graph.vertex_count << "      ";
+	if (graph.is_oriented) cout << "Oriented.";
+	else cout << "Not oriented.";
+	cout << endl;
+
+	for (int i = 0; i < graph.vertex_count; i++) {
+		typed = false;
+		current = graph.neighbours[i].begin;
+		if (!graph.is_oriented) {
+			while (current) {
+				if (current->vertex < i) current = current->next;
+				else break;
+			}
+		}
+		while (current) {
+			cout << '(' << i << ", " << current->vertex << ", " << current->weight << ")  ";
+			typed = true;
+			current = current->next;
+		}
+		if (typed) cout << endl;
+	}
+	cout << endl << endl;
+}
+
+bool acyclical(graph_matrix const &graph, int vertex, vector <bool> &visited) {
+	visited[vertex] = true;
+	for (int i = 0; i < graph.vertex_count; i++) {
+		if (graph.adjacent[vertex][i] != INF) {
+			if (!visited[i]) {
+				if (!acyclical(graph, i, visited)) return false;
+			}
+			else return false;
+		}
+	}
+	return true;
+}
+
+bool acyclical(graph_struct const &graph, int vertex, vector <bool> &visited) {
+	node* current = graph.neighbours[vertex].begin;
+	visited[vertex] = true;
+	while (current) {
+		if (!visited[current->vertex]) {
+			if (!acyclical(graph, current->vertex, visited)) return false;
+			current = current->next;
+		}
+		else return false;
+	}
+	return true;
+}
+
+int try_vertex(graph_matrix const &graph, int vertex, vector <bool> &used) {
+	vector <bool> visited(graph.vertex_count, false);
+	bool unvisited = false;
+	if (acyclical(graph, vertex, visited)) {
+		for (int i = 0; i < graph.vertex_count; i++) {
+			if (!visited[i]) unvisited = true;
+			else used[i] = true;
+		}
+		if (unvisited) return 0;
+		return 1;
+	}
+	return -1;
+}
+
+int try_vertex(graph_struct const &graph, int vertex, vector <bool> &used) {
+	vector <bool> visited(graph.vertex_count, false);
+	bool unvisited = false;
+	if (acyclical(graph, vertex, visited)) {
+		for (int i = 0; i < graph.vertex_count; i++) {
+			if (!visited[i]) unvisited = true;
+			else used[i] = true;
+		}
+		if (unvisited) return 0;
+		return 1;
+	}
+	return -1;
+}
+
+bool is_tree(graph_matrix const &graph) {
+	if (!graph.is_oriented) {
+		throw std::invalid_argument("The tree is not oriented.");
+	}
+	vector <bool> visited(graph.vertex_count, false);
+	int marker;
+	for (int i = 0; i < graph.vertex_count; i++) {
+		if (!visited[i]) {
+			marker = try_vertex(graph, i, visited);
+			if (marker == 1) return true;
+			else {
+				if (marker == -1) return false;
+			}
+		}
+	}
+	return false;
+}
+
+bool is_tree(graph_struct const &graph) {
+	if (!graph.is_oriented) {
+		throw std::invalid_argument("The tree is not oriented.");
+	}
+	vector <bool> visited(graph.vertex_count, false);
+	int marker;
+	for (int i = 0; i < graph.vertex_count; i++) {
+		if (!visited[i]) {
+			marker = try_vertex(graph, i, visited);
+			if (marker == 1) return true;
+			else {
+				if (marker == -1) return false;
+			}
+		}
+	}
+	return false;
+}
+
+std::pair <graph_matrix, int> bfs(graph_matrix const &graph, int vertex, bool by_weight, bool demo = false, bool span_tree_mode = false) {
+	graph_matrix span_tree(graph.vertex_count);
+	if (graph.is_oriented) span_tree.is_oriented = true;
+	int sum = 0;
+	if (vertex >= graph.vertex_count) {
+		throw std::invalid_argument("The vertex doesn't exist.");
+	}
+	else {
+		vector <bool> used(graph.vertex_count, false);
+		vector <std::pair<int, int>> vertice_sorted;
+		deque new_deque;
+		int from;
+
+		used[vertex] = true;
+		new_deque.push_back(vertex);
+		if (demo) cout << vertex;
+
+		while (!new_deque.is_empty()) {
+			from = new_deque.begin->data;
+			if (by_weight) {
+				for (int i = 0; i < graph.vertex_count; i++) {
+					if (graph.adjacent[from][i] != INF) {
+						vertice_sorted.push_back(std::pair <int, int> {graph.adjacent[from][i], i});
+					}
+				}
+				std::sort(vertice_sorted.begin(), vertice_sorted.end());
+				for (auto to : vertice_sorted) {
+					if (!used[to.second]) {
+						used[to.second] = true;
+						new_deque.push_back(to.second);
+						if (demo) cout << " -> " << to.second;
+						if (span_tree_mode) {
+							add_edge(span_tree, from, to.second, to.first);
+							sum += to.first;
+						}
+					}
+				}
+				vertice_sorted.clear();
+			}
+			else {
+				for (int i = 0; i < graph.vertex_count; i++) {
+					if (!used[i] && graph.adjacent[from][i] != INF) {
+						used[i] = true;
+						new_deque.push_back(i);
+						if (demo) cout << " -> " << i;
+						if (span_tree_mode) {
+							add_edge(span_tree, from, i, graph.adjacent[from][i]);
+							sum += graph.adjacent[from][i];
+						}
+					}
+				}
+			}
+			new_deque.pop_front();
+		}
+	} 
+	return std::pair<graph_matrix, int>{span_tree, sum};
+}
+
+std::pair <graph_struct, int> bfs(graph_struct const &graph, int vertex, bool by_weight, bool demo = false, bool span_tree_mode = false) {
+	graph_struct span_tree(graph.vertex_count);
+	if (graph.is_oriented) span_tree.is_oriented = true;
+	int sum = 0;
+	if (vertex >= graph.vertex_count) {
+		throw std::invalid_argument("The vertex doesn't exist.");
+	}
+	else {
+		vector <bool> used(graph.vertex_count, false);
+		vector <std::pair<int, int>> vertice_sorted;
+		deque new_deque;
+		int from;
+		node* current;
+
+		used[vertex] = true;
+		new_deque.push_back(vertex);
+		if (demo) cout << vertex;
+
+		while (!new_deque.is_empty()) {
+			from = new_deque.begin->data;
+			current = graph.neighbours[from].begin;
+			if (by_weight) {
+				while (current) {
+					vertice_sorted.push_back(std::pair <int, int> {current->weight, current->vertex});
+					current = current->next;
+				}
+				std::sort(vertice_sorted.begin(), vertice_sorted.end());
+				for (auto to : vertice_sorted) {
+					if (!used[to.second]) {
+						used[to.second] = true;
+						new_deque.push_back(to.second);
+						if (demo) cout << " -> " << to.second;
+						if (span_tree_mode) {
+							add_edge(span_tree, from, to.second, to.first);
+							sum += to.first;
+						}
+					}
+				}
+				vertice_sorted.clear();
+			}
+			else {
+				while (current) {
+					if (!used[current->vertex]) {
+						used[current->vertex] = true;
+						new_deque.push_back(current->vertex);
+						if (demo) cout << " -> " << current->vertex;
+						if (span_tree_mode) {
+							add_edge(span_tree, from, current->vertex, current->weight);
+							sum += current->weight;
+						}
+					}
+					current = current->next;
+				}
+			}
+			new_deque.pop_front();
+		}
+	}
+	return std::pair<graph_struct, int> {span_tree, sum};
+}
+
+void floyd_algorithm(int(&ways)[MAX_VERTICES][MAX_VERTICES], int(&weights)[MAX_VERTICES][MAX_VERTICES], const int N) {
+	for (int k = 0; k < N; k++) {
+		for (int i = 0; i < N; i++) {
+			for (int j = 0; j < N; j++) {
+				if (weights[i][k] + weights[k][j] < weights[i][j]) {
+					weights[i][j] = weights[i][k] + weights[k][j];
+					ways[i][j] = k;
+				}
+			}
+		}
+	}
+}
+
+void set_shortest_distances(graph_matrix const &graph, int (&ways)[MAX_VERTICES][MAX_VERTICES], int (&weights)[MAX_VERTICES][MAX_VERTICES]) {
+	for (int i = 0; i < graph.vertex_count; i++) {
+		for (int j = 0; j < graph.vertex_count; j++) {
+			if (graph.adjacent[i][j] != INF) ways[i][j] = j;
+			else ways[i][j] = -1;
+			if (i == j) {
+				weights[i][j] = 0;
+				ways[i][j] = -1;
+			}
+			else weights[i][j] = graph.adjacent[i][j];
+		}
+	}
+	floyd_algorithm(ways, weights, graph.vertex_count);
+}
+
+void set_shortest_distances(graph_struct const &graph, int(&ways)[MAX_VERTICES][MAX_VERTICES], int(&weights)[MAX_VERTICES][MAX_VERTICES]) {
+	node* current;
+	for (int i = 0; i < graph.vertex_count; i++) {
+		for (int j = 0; j < graph.vertex_count; j++) {
+			if (i == j) weights[i][j] = 0;
+			else weights[i][j] = INF;
+			ways[i][j] = -1;
+		}
+	}
+	for (int i = 0; i < graph.vertex_count; i++) {
+		current = graph.neighbours[i].begin;
+		while (current) {
+			weights[i][current->vertex] = current->weight;
+			ways[i][current->vertex] = current->vertex;
+			current = current->next;
+		}
+	}
+	floyd_algorithm(ways, weights, graph.vertex_count);
+}
+
+void show_path_recursive(const int (&ways)[MAX_VERTICES][MAX_VERTICES], int i, int j) {
+	int k = ways[i][j];
+	if (k != j) {
+		show_path_recursive(ways, i, k);
+		cout << k << " -> ";
+		show_path_recursive(ways, k, j);
+	}
+}
+
+void show_way(const int(&ways)[MAX_VERTICES][MAX_VERTICES], int i, int j) {
+	if (ways[i][j] != -1) {
+		cout << i << " -> ";
+		show_path_recursive(ways, i, j);
+		cout << j << endl;
+	}
+	else {
+		cout << "no path." << endl;
+	}
+}
+
+bool dfs_with_stack(graph_matrix &graph, int vertex, vector <int> &color, vector <int> &new_vertices) {
+	color[vertex] = 1;
+	for (int i = 0; i < graph.vertex_count; i++) {
+		if (graph.adjacent[vertex][i] != INF) {
+			if (color[i] == 0) {
+				if (!dfs_with_stack(graph, i, color, new_vertices)) return false;
+			}
+			else {
+				if (color[i] == 1) return false;
+			}
+		}
+	}
+	color[vertex] = 2;
+	new_vertices.push_back(vertex);
+	return true;
+}
+
+bool topological_sort(graph_matrix &graph) {
+	if (!graph.is_oriented) {
+		throw std::invalid_argument("The graph is not oriented.");
+	}
+	vector <int> color(graph.vertex_count, 0);
+	vector <int> new_vertices;
+	int new_matrix[MAX_VERTICES][MAX_VERTICES];
+	
+	for (int i = 0; i < graph.vertex_count; i++) {
+		if (color[i] != 2) {
+			if (!dfs_with_stack(graph, i, color, new_vertices)) return false;
+		}
+	}
+	std::reverse(new_vertices.begin(), new_vertices.end());
+	for (int i = 0; i < graph.vertex_count; i++) {
+		for (int j = 0; j < graph.vertex_count; j++) {
+			new_matrix[i][j] = graph.adjacent[new_vertices[i]][new_vertices[j]];
+		}
+	}
+	for (int i = 0; i < graph.vertex_count; i++) {
+		for (int j = 0; j < graph.vertex_count; j++) {
+			graph.adjacent[i][j] = new_matrix[i][j];
+		}
+	}
+	return true;
+}
+
+bool dfs_with_stack(graph_struct &graph, int vertex, vector <int> &color, vector <int> &new_vertices) {
+	node* to = graph.neighbours[vertex].begin;
+	color[vertex] = 1;
+	while (to) {
+		if (color[to->vertex] == 0) {
+			if (!dfs_with_stack(graph, to->vertex, color, new_vertices)) return false;
+		}
+		else {
+			if (color[to->vertex] == 1) return false;
+		}
+		to = to->next;
+	}
+	color[vertex] = 2;
+	new_vertices.push_back(vertex);
+	return true;
+}
+
+bool topological_sort(graph_struct &graph) {
+	if (!graph.is_oriented) {
+		throw std::invalid_argument("The graph is not oriented.");
+	}
+	vector <int> color(graph.vertex_count, 0);
+	vector <int> new_vertices;
+	vector <list> new_struct(graph.vertex_count);
+	node* current;
+
+	for (int i = 0; i < graph.vertex_count; i++) {
+		if (color[i] != 2) {
+			if (!dfs_with_stack(graph, i, color, new_vertices)) return false;
+		}
+	}
+	std::reverse(new_vertices.begin(), new_vertices.end());
+	for (int i = 0; i < graph.vertex_count; i++) {
+		current = graph.neighbours[i].begin;
+		new_struct[i] = graph.neighbours[new_vertices[i]];
+		while (current) {
+			int i = 0;
+			while (new_vertices[i] != current->vertex) i++;
+			current->vertex = i;
+			current = current->next;
+		}
+	}
+	for (int i = 0; i < graph.vertex_count; i++) {
+		graph.neighbours[i] = new_struct[i];
+	}
+	return true;
+}
+
+std::pair<graph_matrix, int> find_spanning_tree(graph_matrix const &graph, int vertex, bool by_weight = false) {
+	if (graph.is_oriented) {
+		throw std::invalid_argument("The graph is oriented.");
+	}
+	return bfs(graph, vertex, by_weight, false, true);
+}
+
+std::pair<graph_struct, int> find_spanning_tree(graph_struct const &graph, int vertex, bool by_weight = false) {
+	if (graph.is_oriented) {
+		throw std::invalid_argument("The graph is oriented.");
+	}
+	return bfs(graph, vertex, by_weight, false, true);
+}
+
+graph_matrix dijkstra_algorithm(graph_matrix const &graph) {
+	graph_matrix result(graph.vertex_count);
+	vector <int> cheapest_cost(graph.vertex_count, INF), cheapest_edge(graph.vertex_count, -1);
+	vector <bool> used(graph.vertex_count, false);
+	int vertices_in_result = 0;
+
+	while (vertices_in_result < graph.vertex_count) {
+		int min_cost = INF, min_vertex = 0;
+		for (int i = 0; i < graph.vertex_count; i++) {
+			if (!used[i] && cheapest_cost[i] < min_cost) {
+				min_vertex = i;
+				min_cost = cheapest_cost[i];
+			}
+		}
+		vertices_in_result++;
+		used[min_vertex] = true;
+		
+		if (cheapest_edge[min_vertex] != -1) {
+			add_edge(result, cheapest_edge[min_vertex], min_vertex, graph.adjacent[min_vertex][cheapest_edge[min_vertex]]);
+		}
+		for (int i = 0; i < graph.vertex_count; i++) {
+			if (!used[i] && graph.adjacent[min_vertex][i] < cheapest_cost[i]) {
+				cheapest_cost[i] = graph.adjacent[min_vertex][i];
+				cheapest_edge[i] = min_vertex;
+			}
+		}
+	}
+	
+	return result;
+}
+
+graph_struct dijkstra_algorithm(graph_struct const &graph) {
+	graph_struct result(graph.vertex_count);
+	vector <int> cheapest_cost(graph.vertex_count, INF), cheapest_edge(graph.vertex_count, -1);
+	vector <bool> used(graph.vertex_count, false);
+	int vertices_in_result = 0;
+	node* current;
+
+	while (vertices_in_result < graph.vertex_count) {
+		int min_cost = INF, min_vertex = 0;
+		for (int i = 0; i < graph.vertex_count; i++) {
+			if (!used[i] && cheapest_cost[i] < min_cost) {
+				min_vertex = i;
+				min_cost = cheapest_cost[i];
+			}
+		}
+		vertices_in_result++;
+		used[min_vertex] = true;
+
+		if (cheapest_edge[min_vertex] != -1) {
+			node* edge = find_in_list(graph.neighbours[cheapest_edge[min_vertex]], min_vertex);
+			add_edge(result, min_vertex, cheapest_edge[min_vertex], edge->weight);
+		}
+		current = graph.neighbours[min_vertex].begin;
+		while (current) {
+			if (!used[current->vertex] && current->weight < cheapest_cost[current->vertex]) {
+				cheapest_cost[current->vertex] = current->weight;
+				cheapest_edge[current->vertex] = min_vertex;
+			}
+			current = current->next;
+		}
+	}
+
+	return result;
+}
+
+void dfs_sum(graph_matrix const &graph, vector <bool> &used, int vertex, int &sum) {
+	used[vertex] = true;
+	for (int i = 0; i < graph.vertex_count; i++) {
+		if (!used[i] && graph.adjacent[vertex][i] != INF) {
+			sum += graph.adjacent[vertex][i];
+			dfs_sum(graph, used, i, sum);
+		}
+	}
+}
+
+void dfs_sum(graph_struct const &graph, vector <bool> &used, int vertex, int &sum) {
+	node* current = graph.neighbours[vertex].begin;
+	used[vertex] = true;
+	while (current) {
+		if (!used[current->vertex]) {
+			sum += current->weight;
+			dfs_sum(graph, used, current->vertex, sum);
+		}
+		current = current->next;
+	}
+}
+
+int calculate_weight(graph_matrix const &graph) {
+	vector <bool> used(graph.vertex_count, false);
+	int sum = 0;
+	for (int i = 0; i < graph.vertex_count; i++) {
+		if (!used[i]) dfs_sum(graph, used, i, sum);
+	}
+	return sum;
+}
+
+int calculate_weight(graph_struct const &graph) {
+	vector <bool> used(graph.vertex_count, false);
+	int sum = 0;
+	for (int i = 0; i < graph.vertex_count; i++) {
+		if (!used[i]) dfs_sum(graph, used, i, sum);
+	}
+	return sum;
+}
+
+
+int input_value(int min, int max) {
+	int value;
+	while (true) {
+		cout << "Value: ";
+		if (!(cin >> value)) {
+			cin.clear();
+			cin.ignore(10000, '\n');
+			cout << "Please, enter numbers only." << endl;
+		}
+		else if (value < min || value > max) {
+			cout << "Please, enter a value from " << min << " to " << max << '.' << endl;
+		}
+		else break;
+	}
+	system("cls");
+	return value;
+}
+
+int num_of_vertices_input() {
+	cout << "Please, enter the number of vertices (limit: " << MAX_VERTICES << ")" << endl;
+	return input_value(1, MAX_VERTICES);
+}
+
+int is_oriented_input() {
+	cout << "Enter:" << endl << "'0' to create non-oriented graph" << endl << "'1' to create oriented graph" << endl;
+	return input_value(0, 1);
+}
+
+void show_min_distance(const int N, int const (&weights)[MAX_VERTICES][MAX_VERTICES], int const (&ways)[MAX_VERTICES][MAX_VERTICES]) {
+	int vertex1, vertex2;
+	cout << "Now enter numbers of vertices you want to find a minimal distance between." << endl;
+	vertex1 = input_value(0, N - 1);
+	cout << "Enter the second vertex." << endl;
+	vertex2 = input_value(0, N - 1);
+	cout << "Minimal distance is: " << weights[vertex1][vertex2] << endl;
+	cout << "Way: ";
+	show_way(ways, vertex1, vertex2);
+	cout << endl << endl;
+}
+
+int oriented_dialogue(graph_matrix &graph) {
+	int weights[MAX_VERTICES][MAX_VERTICES];
+	int ways[MAX_VERTICES][MAX_VERTICES];
+	set_shortest_distances(graph, ways, weights);
+
+	while (true) {
+		cout << "Enter:" << endl << "'0' to add edge" << endl << "'1' to check if graph is a tree" << endl;
+		cout << "'2' to find the shortest distance between nodes (by the edges' weight)" << endl;
+		cout << "'3' for topological sort" << endl << "'4' to show graph" << endl;
+
+		switch (input_value(0, 4)) {
+		case 0: {
+			int vertex1, vertex2, weight;
+			cout << "Now enter numbers of vertices to connect and the weight of connection." << endl;
+			vertex1 = input_value(0, graph.vertex_count - 1);
+			cout << "Now enter the second vertex." << endl;
+			vertex2 = input_value(0, graph.vertex_count - 1);
+			cout << "Now enter a weight." << endl;
+			weight = input_value(1, 1000);
+			add_edge(graph, vertex1, vertex2, weight);
+			cout << "Added!" << endl << endl;
+		}
+		break;
+		case 1:
+			if (is_tree(graph)) {
+				cout << "The graph is a tree." << endl << endl;
+			}
+			else {
+				cout << "The graph is NOT a tree." << endl << endl;
+			}
+			break;
+		case 2:
+			set_shortest_distances(graph, ways, weights);
+			show_min_distance(graph.vertex_count, weights, ways);
+			break;
+		case 3:
+			if (topological_sort(graph)) {
+				cout << "Result:" << endl;
+				graph_output(graph);
+			}
+			else cout << "Sort is impossible, the graph has got a cycle." << endl << endl;
+			break;
+		case 4:
+			graph_output(graph);
+		}
+	}
+}
+
+int not_oriented_dialogue(graph_matrix &graph) {
+	int weights[MAX_VERTICES][MAX_VERTICES];
+	int ways[MAX_VERTICES][MAX_VERTICES];
+	set_shortest_distances(graph, ways, weights);
+
+	while (true) {
+		cout << "Enter:" << endl << "'0' to add edge" << endl;
+		cout << "'1' to find the shortest distance between nodes (by the edges' weight)" << endl;
+		cout << "'2' to find spanning tree (bfs)" << endl << "'3' to find minimal spanning tree (Dijkstra)" << endl;
+		cout << "'4' to show graph" << endl;
+		
+		switch (input_value(0, 4)) {
+		case 0: {
+			int vertex1, vertex2, weight;
+			cout << "Now enter numbers of vertices to connect and the weight of connection." << endl;
+			vertex1 = input_value(0, graph.vertex_count - 1);
+			cout << "Now enter the second vertex." << endl;
+			vertex2 = input_value(0, graph.vertex_count - 1);
+			cout << "Now enter a weight." << endl;
+			weight = input_value(1, 1000);
+			add_edge(graph, vertex1, vertex2, weight);
+			cout << "Added!" << endl << endl;
+		}
+		break;
+		case 1:
+			set_shortest_distances(graph, ways, weights);
+			show_min_distance(graph.vertex_count, weights, ways);
+			break;
+		case 2:
+		{
+			int vertex, by_weight;
+			cout << "Enter a vertex to start." << endl;
+			vertex = input_value(0, graph.vertex_count - 1);
+			cout << "Enter 0 for simple bfs, 1 - for bfs by order of minimal weight." << endl;
+			by_weight = input_value(0, 1);
+			std::pair<graph_matrix, int> span_tree = find_spanning_tree(graph, vertex, (bool)by_weight);
+			graph_output(span_tree.first);
+			cout << "Summary weight: " << span_tree.second << endl << endl;
+		}
+		break;
+		case 3:
+		{
+			graph_matrix min_tree = dijkstra_algorithm(graph);
+			graph_output(min_tree);
+			cout << "Summary weight: " << calculate_weight(min_tree) << endl << endl;
+		}
+		break;
+		case 4:
+			graph_output(graph);
+		}
+	}
+}
+
+int oriented_dialogue(graph_struct &graph) {
+	int weights[MAX_VERTICES][MAX_VERTICES];
+	int ways[MAX_VERTICES][MAX_VERTICES];
+	set_shortest_distances(graph, ways, weights);
+
+	while (true) {
+		cout << "Enter:" << endl << "'0' to add edge" << endl << "'1' to check if graph is a tree" << endl;
+		cout << "'2' to find the shortest distance between nodes (by the edges' weight)" << endl;
+		cout << "'3' for topological sort" << endl << "'4' to show graph" << endl;
+
+		switch (input_value(0, 4)) {
+		case 0: {
+			int vertex1, vertex2, weight;
+			cout << "Now enter numbers of vertices to connect and the weight of connection." << endl;
+			vertex1 = input_value(0, graph.vertex_count - 1);
+			cout << "Now enter the second vertex." << endl;
+			vertex2 = input_value(0, graph.vertex_count - 1);
+			cout << "Now enter a weight." << endl;
+			weight = input_value(1, 1000);
+			add_edge(graph, vertex1, vertex2, weight);
+			cout << "Added!" << endl << endl;
+		}
+				break;
+		case 1:
+			if (is_tree(graph)) {
+				cout << "The graph is a tree." << endl << endl;
+			}
+			else {
+				cout << "The graph is NOT a tree." << endl << endl;
+			}
+			break;
+		case 2:
+			set_shortest_distances(graph, ways, weights);
+			show_min_distance(graph.vertex_count, weights, ways);
+			break;
+		case 3:
+			if (topological_sort(graph)) {
+				cout << "Result:" << endl;
+				graph_output(graph);
+			}
+			else cout << "Sort is impossible, the graph has got a cycle." << endl << endl;
+			break;
+		case 4:
+			graph_output(graph);
+		}
+	}
+}
+
+int not_oriented_dialogue(graph_struct &graph) {
+	int weights[MAX_VERTICES][MAX_VERTICES];
+	int ways[MAX_VERTICES][MAX_VERTICES];
+	set_shortest_distances(graph, ways, weights);
+
+	while (true) {
+		cout << "Enter:" << endl << "'0' to add edge" << endl;
+		cout << "'1' to find the shortest distance between nodes (by the edges' weight)" << endl;
+		cout << "'2' to find spanning tree (bfs)" << endl << "'3' to find minimal spanning tree (Dijkstra)" << endl;
+		cout << "'4' to show graph" << endl;
+
+		switch (input_value(0, 4)) {
+		case 0: {
+			int vertex1, vertex2, weight;
+			cout << "Now enter numbers of vertices to connect and the weight of connection." << endl;
+			vertex1 = input_value(0, graph.vertex_count - 1);
+			cout << "Now enter the second vertex." << endl;
+			vertex2 = input_value(0, graph.vertex_count - 1);
+			cout << "Now enter a weight." << endl;
+			weight = input_value(1, 1000);
+			add_edge(graph, vertex1, vertex2, weight);
+			cout << "Added!" << endl << endl;
+		}
+				break;
+		case 1:
+			set_shortest_distances(graph, ways, weights);
+			show_min_distance(graph.vertex_count, weights, ways);
+			break;
+		case 2:
+		{
+			int vertex, by_weight;
+			cout << "Enter a vertex to start." << endl;
+			vertex = input_value(0, graph.vertex_count - 1);
+			cout << "Enter 0 for simple bfs, 1 - for bfs by order of minimal weight." << endl;
+			by_weight = input_value(0, 1);
+			std::pair<graph_struct, int> span_tree = find_spanning_tree(graph, vertex, (bool)by_weight);
+			graph_output(span_tree.first);
+			cout << "Summary weight: " << span_tree.second << endl << endl;
+		}
+		break;
+		case 3:
+		{
+			graph_struct min_tree = dijkstra_algorithm(graph);
+			graph_output(min_tree);
+			cout << "Summary weight: " << calculate_weight(min_tree) << endl << endl;
+		}
+		break;
+		case 4:
+			graph_output(graph);
+		}
+	}
+}
+
+int matrix_dialogue() {
+	graph_matrix graph(num_of_vertices_input());
+
+	switch (is_oriented_input()) {
+	case 0:
+		return not_oriented_dialogue(graph);
+	case 1:
+		graph.is_oriented = true;
+		return oriented_dialogue(graph);
+	default:
+		return 0;
+	}
+}
+
+int struct_dialogue() {
+	graph_struct graph(num_of_vertices_input());
+
+	switch (is_oriented_input()) {
+	case 0:
+		return not_oriented_dialogue(graph);
+	case 1:
+		graph.is_oriented = true;
+		return oriented_dialogue(graph);
+	default:
+		return 0;
+	}
+}
+
+int dialogue_mode() {
+	cout << "Enter:" << endl << "'0' to create graph as matrix" << endl << "'1' to create graph as structure" << endl;
+
+	switch (input_value(0, 1)) {
+	case 0:
+		return matrix_dialogue();
+	case 1: 
+		return struct_dialogue();
+	default:
+		return 0;
+	}
+}
+
+
+int demonstration_mode() {
+	graph_matrix graph_matr = generate_graph_matrix(7, 0.7, false);
+	graph_struct graph_str = generate_graph_struct(7, 0.7, true);   //oriented
+	int weights[MAX_VERTICES][MAX_VERTICES], ways[MAX_VERTICES][MAX_VERTICES];
+
+	cout << "Generated graph matrix:" << endl;
+	graph_output(graph_matr);
+	cout << "Generated graph struct:" << endl;
+	graph_output(graph_str);
+
+	graph_matr = struct_to_matrix(graph_str);
+
+	cout << "Graph struct after turning into graph matrix - GRAPH #1:" << endl;
+	graph_output(graph_matr);
+	cout << "New graph struct (not oriented) - GRAPH #2:" << endl;
+	graph_str = generate_graph_struct(7, 0.7, false);
+	graph_output(graph_str);
+
+	cout << "BFS of the first graph (starting from v.0): ";
+	bfs(graph_matr, 0, false, true);
+	cout << endl << endl << "BFS of the second graph (weight priority, starting from v.0): ";
+	bfs(graph_str, 0, true, true);
+	cout << endl << endl;
+
+	cout << "Spanning tree of the second graph (bfs, weight priority):" << endl;
+	std::pair<graph_struct, int> span_tree = find_spanning_tree(graph_str, 0, true);
+	graph_output(span_tree.first);
+	cout << "Summary weight: " << span_tree.second << endl << endl;
+
+	cout << "Spanning tree of the second graph (Dijkstra algorithm):" << endl;
+	graph_matrix span_tree_djp = dijkstra_algorithm(graph_matr);
+	graph_output(span_tree_djp);
+	cout << "Summary weight: " << calculate_weight(span_tree_djp) << endl << endl;
+
+	cout << "Let's generate a tree:" << endl;
+	graph_struct tree = generate_tree_str(7, true);
+	graph_output(tree);
+
+	cout << "Checking if the tree is a tree: ";
+	if (is_tree(tree)) cout << "is tree.";
+	else cout << "is not a tree.";
+	cout << endl << endl;
+
+	cout << "Topological sort of the tree:" << endl;
+	if (topological_sort(tree)) {
+		graph_output(tree);
+	}
+	else cout << "The graph has got a cycle. Topological sort is impossible." << endl << endl;
+
+	cout << "Calculating minimal distances (Floyd's algoritm) on the second graph." << endl;
+	set_shortest_distances(graph_str, ways, weights);
+	cout << "From v.1 to v.4:" << endl;
+	cout << "Total weight: " << weights[1][4] << endl;
+	cout << "Path: ";
+	show_way(ways, 1, 4);
+	cout << endl << endl << "From v.2 to v.6:" << endl;
+	cout << "Total weight: " << weights[2][6] << endl;
+	cout << "Path: ";
+	show_way(ways, 2, 6);
+
+	return 0;
+}
+
+
+int benchmark() {
+	const int NUM_OF_SAMPLES = 4;
+	graph_matrix graphs_matr[NUM_OF_SAMPLES];
+	graph_matrix tree_matr_oriented[NUM_OF_SAMPLES];
+	graph_struct graphs_str[NUM_OF_SAMPLES];
+	graph_struct tree_str_oriented[NUM_OF_SAMPLES];
+	double p[] = { 0.1, 0.4, 0.7, 1.0 };
+	int v[] = { int(MAX_VERTICES / 5) + 1, int(MAX_VERTICES / 2) + 1, int(MAX_VERTICES / 1.5) + 1, MAX_VERTICES };
+	int weights[MAX_VERTICES][MAX_VERTICES];
+	int ways[MAX_VERTICES][MAX_VERTICES];
+	std::chrono::time_point<std::chrono::system_clock> start, end;
+
+	for (int i = 0; i < NUM_OF_SAMPLES; i++) {
+		graphs_matr[i] = generate_graph_matrix(MAX_VERTICES, p[i]);
+		graphs_str[i] = generate_graph_struct(MAX_VERTICES, p[i]);
+	}
+	for (int i = 0; i < NUM_OF_SAMPLES; i++) {
+		tree_matr_oriented[i] = generate_tree_matr(v[i], true);
+		tree_str_oriented[i] = generate_tree_str(v[i], true);
+	}
+
+	cout << "             BENCHMARK (vertices: " << MAX_VERTICES << ')' << endl << endl;
+	cout << "IS_TREE:" << endl;
+	for (int i = 0; i < NUM_OF_SAMPLES; i++) {
+		cout << "Vertices: " << v[i] << endl;
+		cout << "Matrix: ";
+		start = std::chrono::system_clock::now();
+		is_tree(tree_matr_oriented[i]);
+		end = std::chrono::system_clock::now();
+		cout << std::chrono::duration_cast<std::chrono::milliseconds>(end - start).count() << "ms\n";
+		cout << "Struct: ";
+		start = std::chrono::system_clock::now();
+		is_tree(tree_str_oriented[i]);
+		end = std::chrono::system_clock::now();
+		cout << std::chrono::duration_cast<std::chrono::milliseconds>(end - start).count() << "ms\n";
+	}
+	cout << endl;
+
+	cout << "BFS:" << endl;
+	for (int i = 0; i < NUM_OF_SAMPLES; i++) {
+		cout << "Probability: " << p[i] << endl;
+		cout << "Matrix: ";
+		start = std::chrono::system_clock::now();
+		bfs(graphs_matr[i], 0, false);
+		end = std::chrono::system_clock::now();
+		cout << std::chrono::duration_cast<std::chrono::milliseconds>(end - start).count() << "ms\n";
+		cout << "Struct: ";
+		start = std::chrono::system_clock::now();
+		bfs(graphs_str[i], 0, false);
+		end = std::chrono::system_clock::now();
+		cout << std::chrono::duration_cast<std::chrono::milliseconds>(end - start).count() << "ms\n";
+	}
+	cout << endl;
+
+	cout << "BFS (weight priority):" << endl;
+	for (int i = 0; i < NUM_OF_SAMPLES; i++) {
+		cout << "Probability: " << p[i] << endl;
+		cout << "Matrix: ";
+		start = std::chrono::system_clock::now();
+		bfs(graphs_matr[i], 0, true);
+		end = std::chrono::system_clock::now();
+		cout << std::chrono::duration_cast<std::chrono::milliseconds>(end - start).count() << "ms\n";
+		cout << "Struct: ";
+		start = std::chrono::system_clock::now();
+		bfs(graphs_str[i], 0, true);
+		end = std::chrono::system_clock::now();
+		cout << std::chrono::duration_cast<std::chrono::milliseconds>(end - start).count() << "ms\n";
+	}
+	cout << endl;
+
+	cout << "FLOYD'S ALGORITHM:" << endl;
+	for (int i = 0; i < NUM_OF_SAMPLES; i++) {
+		cout << "Probability: " << p[i] << endl;
+		cout << "Matrix: ";
+		start = std::chrono::system_clock::now();
+		set_shortest_distances(graphs_matr[i], ways, weights);
+		end = std::chrono::system_clock::now();
+		cout << std::chrono::duration_cast<std::chrono::milliseconds>(end - start).count() << "ms\n";
+		cout << "Struct: ";
+		start = std::chrono::system_clock::now();
+		set_shortest_distances(graphs_str[i], ways, weights);
+		end = std::chrono::system_clock::now();
+		cout << std::chrono::duration_cast<std::chrono::milliseconds>(end - start).count() << "ms\n";
+	}
+	cout << endl;
+
+	cout << "SPANNING TREE (BFS):" << endl;
+	for (int i = 0; i < NUM_OF_SAMPLES; i++) {
+		cout << "Probability: " << p[i] << endl;
+		cout << "Matrix: ";
+		start = std::chrono::system_clock::now();
+		bfs(graphs_matr[i], 0, false, false, true);
+		end = std::chrono::system_clock::now();
+		cout << std::chrono::duration_cast<std::chrono::milliseconds>(end - start).count() << "ms\n";
+		cout << "Struct: ";
+		start = std::chrono::system_clock::now();
+		bfs(graphs_str[i], 0, false, false, true);
+		end = std::chrono::system_clock::now();
+		cout << std::chrono::duration_cast<std::chrono::milliseconds>(end - start).count() << "ms\n";
+	}
+	cout << endl;
+
+	cout << "SPANNING TREE (BFS, weight priority):" << endl;
+	for (int i = 0; i < NUM_OF_SAMPLES; i++) {
+		cout << "Probability: " << p[i] << endl;
+		cout << "Matrix: ";
+		start = std::chrono::system_clock::now();
+		bfs(graphs_matr[i], 0, true, false, true);
+		end = std::chrono::system_clock::now();
+		cout << std::chrono::duration_cast<std::chrono::milliseconds>(end - start).count() << "ms\n";
+		cout << "Struct: ";
+		start = std::chrono::system_clock::now();
+		bfs(graphs_str[i], 0, true, false, true);
+		end = std::chrono::system_clock::now();
+		cout << std::chrono::duration_cast<std::chrono::milliseconds>(end - start).count() << "ms\n";
+	}
+	cout << endl;
+
+	cout << "TOPOLOGICAL SORT:" << endl;
+	for (int i = 0; i < NUM_OF_SAMPLES; i++) {
+		cout << "Vertices: " << v[i] << endl;
+		cout << "Matrix: ";
+		start = std::chrono::system_clock::now();
+		topological_sort(tree_matr_oriented[i]);
+		end = std::chrono::system_clock::now();
+		cout << std::chrono::duration_cast<std::chrono::milliseconds>(end - start).count() << "ms\n";
+		cout << "Struct: ";
+		start = std::chrono::system_clock::now();
+		topological_sort(tree_str_oriented[i]);
+		end = std::chrono::system_clock::now();
+		cout << std::chrono::duration_cast<std::chrono::milliseconds>(end - start).count() << "ms\n";
+	}
+	cout << endl;
+
+	cout << "MINIMAL SPANNING TREE (DJP):" << endl;
+	for (int i = 0; i < NUM_OF_SAMPLES; i++) {
+		cout << "Probability: " << p[i] << endl;
+		cout << "Matrix: ";
+		start = std::chrono::system_clock::now();
+		dijkstra_algorithm(graphs_matr[i]);
+		end = std::chrono::system_clock::now();
+		cout << std::chrono::duration_cast<std::chrono::milliseconds>(end - start).count() << "ms\n";
+		cout << "Struct: ";
+		start = std::chrono::system_clock::now();
+		dijkstra_algorithm(graphs_str[i]);
+		end = std::chrono::system_clock::now();
+		cout << std::chrono::duration_cast<std::chrono::milliseconds>(end - start).count() << "ms\n";
+	}
+	cout << endl;
+
+	return 0;
+}
+
+int main()
+{
+	cout << "Enter:" << endl << "'0' for dialogue mode" << endl << "'1' for demonstration mode" << endl;
+	cout << "'2' for benchmark" << endl;
+	
+	switch (input_value(0, 2)) {
+	case 0:
+		return dialogue_mode();
+	case 1:
+		return demonstration_mode();
+	case 2:
+		return benchmark();
+	}
+}
